@@ -28,9 +28,10 @@ func (c *Conn) readWsPayload_transferToHub() {
 		c.socket.Close()
 	}()
 
-	for {
+	readSocket := true
+	for readSocket {
 		var payload SocketMessagePayload
-		c.socket.ReadJSON(payload)
+		c.socket.ReadJSON(&payload)
 
 		switch payload.Event {
 		case "morphine.join":
@@ -49,6 +50,9 @@ func (c *Conn) readWsPayload_transferToHub() {
 				topic:   payload.Topic,
 				message: []byte(payload.JsonMessage),
 			}
+		case "":
+			log.Printf("CONN::STATE: id:%v closed", c.id)
+			readSocket = false //socket is most likely compromised
 		default:
 			c.writeToWs_readFromHub(Message{
 				topic:   "system",
@@ -96,7 +100,7 @@ func Generate_ClientWS(
 	//generate uuid for the connection
 	id := uuid.New()
 	if err != nil {
-		log.Fatal("UUID: couldn't generate uuid using os/exec")
+		log.Fatal("UUID: couldn't generate uuid using google/uuid")
 	}
 
 	conn := &Conn{
