@@ -1,5 +1,7 @@
 package core
 
+import "log"
+
 /*
 leverages pub/sub mechanism
 run a goroutine and use a channel to broadcast messages
@@ -44,7 +46,7 @@ func (h *Hub) Run() {
 		select {
 		case channel_conn_info := <-h.join:
 			//systems level topics require permission to join
-			if len(channel_conn_info.client.topics) < 10 {
+			if channel_conn_info.client.topic_arr_len < 10 {
 				var alreadySubscribed bool = false
 				for _, topic := range channel_conn_info.client.topics {
 					if topic == channel_conn_info.topic {
@@ -56,6 +58,11 @@ func (h *Hub) Run() {
 				if !alreadySubscribed {
 					channel_conn_info.client.topics = append(channel_conn_info.client.topics, channel_conn_info.topic)
 					h.rooms[channel_conn_info.topic] = append(h.rooms[channel_conn_info.topic], channel_conn_info.client)
+					channel_conn_info.client.topic_arr_len++
+
+					log.Printf("ROOM::ACCESS: id:%v has joined room:%v", channel_conn_info.client.id, channel_conn_info.topic)
+				} else {
+					log.Printf("ROOM::ACCESS: id:%v already joined room:%v", channel_conn_info.client.id, channel_conn_info.topic)
 				}
 			}
 		case channel_conn_info := <-h.leave:
@@ -67,20 +74,26 @@ func (h *Hub) Run() {
 						break
 					}
 				}
+
+				log.Printf("ROOM::ACCESS: removed id:%v from array for room:%v", channel_conn_info.client.id, channel_conn_info.topic)
 			}()
 			go func() {
 				for index, topic := range channel_conn_info.client.topics {
 					if topic == channel_conn_info.topic {
 						channel_conn_info.client.topics = remove(channel_conn_info.client.topics, index)
+						channel_conn_info.client.topic_arr_len--
 						break
 					}
 				}
+
+				log.Printf("ROOM::ACCESS: removed room:%v from topics array for id:%v", channel_conn_info.topic, channel_conn_info.client.id)
 			}()
 		case payload := <-h.broadcast:
 			var authorized bool = false
 			for _, conn := range h.rooms[payload.topic] {
 				if conn.id == payload.conn_id {
 					authorized = true
+					break
 				}
 			}
 
@@ -88,6 +101,8 @@ func (h *Hub) Run() {
 				for _, conn := range h.rooms[payload.topic] {
 					conn.writeToWs_readFromHub(payload, "morphine.message")
 				}
+			} else {
+				log.Printf("ROOM::ACCESS: id:%v failed to broadcast message to room:%v", payload.conn_id, payload.topic)
 			}
 		case conn := <-h.disconnect:
 			for topic, room := range h.rooms {

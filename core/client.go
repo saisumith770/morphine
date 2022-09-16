@@ -10,10 +10,11 @@ import (
 )
 
 type Conn struct {
-	id     string
-	hub    *Hub
-	topics []string //all topics a client is subscribed to
-	socket *websocket.Conn
+	id            string
+	hub           *Hub
+	topics        []string //all topics a client is subscribed to
+	topic_arr_len int
+	socket        *websocket.Conn
 }
 
 type SocketMessagePayload struct {
@@ -54,6 +55,7 @@ func (c *Conn) readWsPayload_transferToHub() {
 			log.Printf("CONN::STATE: id:%v closed", c.id)
 			readSocket = false //socket is most likely compromised
 		default:
+			log.Printf("SOCKET::EVENT: unknown event %v was received", payload.Event)
 			c.writeToWs_readFromHub(Message{
 				topic:   "system",
 				message: []byte("custom events not supported yet. Use base events: 'morphine.join','morphine.leave','morphine.message'"),
@@ -94,20 +96,21 @@ func Generate_ClientWS(
 ) {
 	socket, err := upgrader.Upgrade(resp, req, nil) //no automatic setting of response headers
 	if err != nil {
-		log.Fatal("WEBSOCKET::UPGRADER: failed to updgrade the websocket connection")
+		log.Printf("WEBSOCKET::UPGRADER: failed to updgrade the websocket connection")
 	}
 
 	//generate uuid for the connection
 	id := uuid.New()
 	if err != nil {
-		log.Fatal("UUID: couldn't generate uuid using google/uuid")
+		log.Printf("UUID: couldn't generate uuid using google/uuid")
 	}
 
 	conn := &Conn{
-		id:     id.String(),
-		hub:    h,
-		topics: make([]string, 10), //can subscribe to a max of 10 topics
-		socket: socket,
+		id:            id.String(),
+		hub:           h,
+		topics:        make([]string, 10), //can subscribe to a max of 10 topics
+		topic_arr_len: 0,
+		socket:        socket,
 	}
 
 	conn.readWsPayload_transferToHub()
