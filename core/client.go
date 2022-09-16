@@ -45,6 +45,7 @@ func (c *Conn) readWsPayload_transferToHub() {
 			}
 		case "morphine.message":
 			c.hub.broadcast <- Message{
+				conn_id: c.id,
 				topic:   payload.Topic,
 				message: []byte(payload.JsonMessage),
 			}
