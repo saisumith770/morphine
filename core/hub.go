@@ -43,6 +43,7 @@ func (h *Hub) Run() {
 	for {
 		select {
 		case channel_conn_info := <-h.join:
+			//systems level topics require permission to join
 			if len(channel_conn_info.client.topics) < 10 {
 				var alreadySubscribed bool = false
 				for _, topic := range channel_conn_info.client.topics {
