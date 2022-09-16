@@ -16,18 +16,20 @@ type Message struct {
 }
 
 type Hub struct {
-	rooms     map[string][]*Conn
-	broadcast chan Message
-	join      chan ChannelConnInfo
-	leave     chan ChannelConnInfo
+	rooms      map[string][]*Conn
+	broadcast  chan Message
+	join       chan ChannelConnInfo
+	leave      chan ChannelConnInfo
+	disconnect chan *Conn
 }
 
 func Generate_HubService() (h *Hub) {
 	return &Hub{
-		rooms:     make(map[string][]*Conn), //rooms are collections of Conn subscribed to some topic
-		broadcast: make(chan Message),
-		join:      make(chan ChannelConnInfo),
-		leave:     make(chan ChannelConnInfo),
+		rooms:      make(map[string][]*Conn), //rooms are collections of Conn subscribed to some topic
+		broadcast:  make(chan Message),
+		join:       make(chan ChannelConnInfo),
+		leave:      make(chan ChannelConnInfo),
+		disconnect: make(chan *Conn),
 	}
 }
 
@@ -50,7 +52,16 @@ func (h *Hub) Run() {
 			}
 		case payload := <-h.broadcast:
 			for _, conn := range h.rooms[payload.topic] {
-				conn.send <- payload.message
+				conn.writeToWs_readFromHub(payload, "morphine.message")
+			}
+		case conn := <-h.disconnect:
+			for topic, room := range h.rooms {
+				for index, connection := range room {
+					if connection.id == conn.id {
+						h.rooms[topic] = remove(room, index)
+						break
+					}
+				}
 			}
 		}
 	}

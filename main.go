@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 
 	"com.mixin.morphine/core"
@@ -16,5 +17,5 @@ func main() {
 		core.Generate_ClientWS(hub, req, res)
 	})
 
-	http.ListenAndServe(":4001", router)
+	log.Fatal("RUNNING::SERVER: ", http.ListenAndServe(":4001", router))
 }
