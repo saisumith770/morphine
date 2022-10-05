@@ -56,7 +56,14 @@ func main() {
 			res.WriteHeader(401)
 			return
 		}
-		core.Generate_ClientWS(hub, req, res)
+
+		profileDetails := core.WebsocketProfileDetails{
+			Name:   req.URL.Query().Get("name"),
+			Avatar: req.URL.Query().Get("avatar"),
+		}
+		// json.NewDecoder(req.Body).Decode(&profileDetails)
+
+		core.Generate_ClientWS(hub, req, res, profileDetails)
 	})
 
 	log.Fatal("RUNNING::SERVER: ", http.ListenAndServe(":4001", router))

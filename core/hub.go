@@ -24,6 +24,8 @@ type WebhookConnInfo struct {
 
 type Message struct {
 	conn_id string
+	name    string
+	avatar  string
 	topic   string
 	message []byte
 }
@@ -85,6 +87,9 @@ func (h *Hub) Run() {
 				for index, conn := range h.rooms[channel_conn_info.topic] {
 					if conn.id == channel_conn_info.client.id {
 						h.rooms[channel_conn_info.topic] = remove(h.rooms[channel_conn_info.topic], index)
+						if len(h.rooms[channel_conn_info.topic]) == 0 {
+							delete(h.rooms, channel_conn_info.topic)
+						}
 						break
 					}
 				}
@@ -147,6 +152,9 @@ func (h *Hub) Run() {
 				for index, connection := range room {
 					if connection.id == conn.id {
 						h.rooms[topic] = remove(room, index)
+						if len(h.rooms[topic]) == 0 {
+							delete(h.rooms, topic)
+						}
 						break
 					}
 				}

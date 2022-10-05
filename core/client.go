@@ -11,6 +11,8 @@ import (
 
 type Conn struct {
 	id            string
+	name          string
+	avatar        string
 	hub           *Hub
 	topics        []string //all topics a client is subscribed to
 	topic_arr_len int
@@ -18,9 +20,16 @@ type Conn struct {
 }
 
 type SocketMessagePayload struct {
+	Name        string `json:"name"`
+	Avatar      string `json:"avatar"`
 	Topic       string `json:"topic"`
 	Event       string `json:"event"`
 	JsonMessage string `json:"json_message"`
+}
+
+type WebsocketProfileDetails struct {
+	Name   string `json:"name"`
+	Avatar string `json:"avatar"`
 }
 
 func (c *Conn) readWsPayload_transferToHub() {
@@ -48,6 +57,8 @@ func (c *Conn) readWsPayload_transferToHub() {
 		case "morphine.message":
 			c.hub.broadcast <- Message{
 				conn_id: c.id,
+				name:    c.name,
+				avatar:  c.avatar,
 				topic:   payload.Topic,
 				message: []byte(payload.JsonMessage),
 			}
@@ -66,6 +77,8 @@ func (c *Conn) readWsPayload_transferToHub() {
 
 func (c *Conn) writeToWs_readFromHub(msg Message, event string) {
 	var socketMessage SocketMessagePayload = SocketMessagePayload{
+		Name:        msg.name,
+		Avatar:      msg.avatar,
 		Topic:       msg.topic,
 		Event:       event,
 		JsonMessage: string(msg.message),
@@ -100,6 +113,7 @@ func Generate_ClientWS(
 	h *Hub,
 	req *http.Request,
 	resp http.ResponseWriter,
+	profileDetails WebsocketProfileDetails,
 ) {
 	socket, err := upgrader.Upgrade(resp, req, nil) //no automatic setting of response headers
 	if err != nil {
@@ -114,6 +128,8 @@ func Generate_ClientWS(
 
 	conn := &Conn{
 		id:            id.String(),
+		name:          profileDetails.Name,
+		avatar:        profileDetails.Avatar,
 		hub:           h,
 		topics:        make([]string, 10), //can subscribe to a max of 10 topics
 		topic_arr_len: 0,
