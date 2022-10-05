@@ -46,6 +46,20 @@ func main() {
 		core.Subscribe_Webhook(hub, webhook_payload.Topic, webhook_payload.Url)
 	})
 
+	router.HandleFunc("/connections", func(res http.ResponseWriter, req *http.Request) {
+		access_token := strings.TrimPrefix(req.Header.Get("Access-Token"), "Bearer ")
+		switch access_token {
+		case os.Getenv("ADMIN_ACCESS"):
+		case os.Getenv("SERVER_ACCESS"):
+		case os.Getenv("USER_ACCESS"):
+		default:
+			res.WriteHeader(401)
+			return
+		}
+
+		core.Room_Presence(hub, req.URL.Query().Get("room"))
+	})
+
 	router.HandleFunc("/connect", func(res http.ResponseWriter, req *http.Request) {
 		access_token := strings.TrimPrefix(req.Header.Get("Access-Token"), "Bearer ")
 		switch access_token {

@@ -97,6 +97,17 @@ func Subscribe_Webhook(hub *Hub, topic string, url string) {
 	}
 }
 
+func Room_Presence(hub *Hub, topic string) []WebsocketProfileDetails {
+	var result []WebsocketProfileDetails
+	for _, conn := range hub.rooms[topic] {
+		result = append(result, WebsocketProfileDetails{
+			Name:   conn.name,
+			Avatar: conn.avatar,
+		})
+	}
+	return result
+}
+
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024, //default read size
 	WriteBufferSize: 1024, //default write size
