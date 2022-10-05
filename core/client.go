@@ -77,6 +77,13 @@ func (c *Conn) writeToWs_readFromHub(msg Message, event string) {
 	}
 }
 
+func Subscribe_Webhook(hub *Hub, topic string, url string) {
+	hub.webhook <- WebhookConnInfo{
+		Topic: topic,
+		Url:   url,
+	}
+}
+
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024, //default read size
 	WriteBufferSize: 1024, //default write size

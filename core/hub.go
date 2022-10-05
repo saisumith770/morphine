@@ -1,6 +1,11 @@
 package core
 
-import "log"
+import (
+	"bytes"
+	"encoding/json"
+	"log"
+	"net/http"
+)
 
 /*
 leverages pub/sub mechanism
@@ -10,6 +15,11 @@ run a goroutine and use a channel to broadcast messages
 type ChannelConnInfo struct {
 	topic  string
 	client *Conn
+}
+
+type WebhookConnInfo struct {
+	Topic string `json:"topic"`
+	Url   string `json:"url"`
 }
 
 type Message struct {
@@ -24,6 +34,8 @@ type Hub struct {
 	join       chan ChannelConnInfo
 	leave      chan ChannelConnInfo
 	disconnect chan *Conn
+	webhook    chan WebhookConnInfo
+	webhooks   map[string][]string
 }
 
 func Generate_HubService() (h *Hub) {
@@ -33,6 +45,8 @@ func Generate_HubService() (h *Hub) {
 		join:       make(chan ChannelConnInfo),
 		leave:      make(chan ChannelConnInfo),
 		disconnect: make(chan *Conn),
+		webhook:    make(chan WebhookConnInfo),
+		webhooks:   make(map[string][]string),
 	}
 }
 
@@ -98,12 +112,36 @@ func (h *Hub) Run() {
 			}
 
 			if authorized {
-				for _, conn := range h.rooms[payload.topic] {
-					conn.writeToWs_readFromHub(payload, "morphine.message")
-				}
+				go func() {
+					for _, conn := range h.rooms[payload.topic] {
+						conn.writeToWs_readFromHub(payload, "morphine.message")
+					}
+				}()
+				go func() {
+					for _, webhook := range h.webhooks[payload.topic] {
+						byteBody, err := json.Marshal(map[string]string{
+							"topic":   payload.topic,
+							"message": string(payload.message),
+						})
+						postBody := bytes.NewBuffer(byteBody)
+						if err != nil {
+							log.Printf("ROOM::WEBHOOKS: failed to send post request to webhook:%v", webhook)
+						} else {
+							resp, err := http.Post(webhook, "application/json", postBody)
+							if err != nil {
+								log.Printf("ROOM::WEBHOOKS: failed to send post request to webhook:%v err:%v", webhook, err)
+							} else {
+								log.Printf("ROOM::WEBHOOKS: response:%v", resp)
+							}
+						}
+					}
+				}()
 			} else {
 				log.Printf("ROOM::ACCESS: id:%v failed to broadcast message to room:%v", payload.conn_id, payload.topic)
 			}
+		case webhook := <-h.webhook:
+			h.webhooks[webhook.Topic] = append(h.webhooks[webhook.Topic], webhook.Url)
+			log.Printf("WEBHOOK::CREATE: successfully subscribed url:%v to room:%v", webhook.Url, webhook.Topic)
 		case conn := <-h.disconnect:
 			for topic, room := range h.rooms {
 				for index, connection := range room {
