@@ -159,6 +159,7 @@ func (h *Hub) Run() {
 					}
 				}
 			}
+			log.Printf("CONN::STATE: disconnected %v from all rooms", conn.id)
 		}
 	}
 }

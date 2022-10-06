@@ -63,7 +63,7 @@ func (c *Conn) readWsPayload_transferToHub() {
 				message: []byte(payload.JsonMessage),
 			}
 		case "":
-			log.Printf("CONN::STATE: id:%v closed", c.id)
+			log.Printf("CONN::STATE: id:%v closed due to empty event", c.id)
 			readSocket = false //socket is most likely compromised
 		default:
 			log.Printf("SOCKET::EVENT: unknown event %v was received", payload.Event)
