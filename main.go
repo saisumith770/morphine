@@ -55,14 +55,13 @@ func main() {
 		json.NewDecoder(req.Body).Decode(&webhook_payload)
 
 		core.Subscribe_Webhook(hub, webhook_payload.Topic, webhook_payload.Url)
-	})
+	}).Methods("POST")
 
 	router.HandleFunc("/connections", func(res http.ResponseWriter, req *http.Request) {
 		access_token := strings.TrimPrefix(req.Header.Get("Access-Token"), "Bearer ")
 		switch access_token {
 		case os.Getenv("ADMIN_ACCESS"):
 		case os.Getenv("SERVER_ACCESS"):
-		case os.Getenv("USER_ACCESS"):
 		default:
 			cookie, err := req.Cookie("sessionid")
 			if err != nil {
@@ -79,7 +78,7 @@ func main() {
 		}
 
 		core.Room_Presence(hub, req.URL.Query().Get("room"))
-	})
+	}).Methods("GET")
 
 	router.HandleFunc("/connect", func(res http.ResponseWriter, req *http.Request) {
 		access_token := strings.TrimPrefix(req.Header.Get("Access-Token"), "Bearer ")
@@ -87,26 +86,41 @@ func main() {
 			Name:   req.URL.Query().Get("name"),
 			Avatar: req.URL.Query().Get("avatar"),
 		}
+		var sessionid string
+		var role core.Role
 		switch access_token {
 		case os.Getenv("ADMIN_ACCESS"):
+			role = core.ADMIN
+			if req.URL.Query().Get("sessionid") != "" {
+				sessionid = req.URL.Query().Get("sessionid")
+			} else {
+				sessionid = "admin"
+			}
 		case os.Getenv("SERVER_ACCESS"):
-		case os.Getenv("USER_ACCESS"):
+			role = core.SERVER
+			if req.URL.Query().Get("sessionid") != "" {
+				sessionid = req.URL.Query().Get("sessionid")
+			} else {
+				sessionid = "server"
+			}
 		default:
+			role = core.USER
 			cookie, err := req.Cookie("sessionid")
 			if err != nil {
 				log.Printf("SERVER::COOKIE: could not access the sessionid cookie")
 				res.WriteHeader(401)
 				return
 			}
-			details, err := rdb.Get(ctx, cookie.Value).Result()
+			sessionid = cookie.Value
+			details, err := rdb.Get(ctx, sessionid).Result()
 			if err != nil {
-				log.Printf("REDIS::KEY: could not get the session id %v from redis", cookie.Value)
+				log.Printf("REDIS::KEY: could not get the session id %v from redis", sessionid)
 				res.WriteHeader(401)
 				return
 			}
 			json.Unmarshal([]byte(details), &profileDetails)
 		}
-		core.Generate_ClientWS(hub, req, res, profileDetails)
+		core.Generate_ClientWS(hub, req, res, profileDetails, role, sessionid)
 	})
 
 	log.Fatal("RUNNING::SERVER: ", http.ListenAndServe(":4001", router))

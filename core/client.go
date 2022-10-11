@@ -9,6 +9,14 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+type Role int64
+
+const (
+	ADMIN Role = iota
+	SERVER
+	USER
+)
+
 type Conn struct {
 	id            string
 	name          string
@@ -17,6 +25,7 @@ type Conn struct {
 	topics        []string //all topics a client is subscribed to
 	topic_arr_len int
 	socket        *websocket.Conn
+	role          Role
 }
 
 type SocketMessagePayload struct {
@@ -61,6 +70,22 @@ func (c *Conn) readWsPayload_transferToHub() {
 				avatar:  c.avatar,
 				topic:   payload.Topic,
 				message: []byte(payload.JsonMessage),
+			}
+		case "morphine.direct_message":
+			if c.role == ADMIN || c.role == SERVER {
+				c.hub.dm <- Message{
+					conn_id: c.id,
+					name:    c.name,
+					avatar:  c.avatar,
+					topic:   payload.Topic,
+					message: []byte(payload.JsonMessage),
+				}
+			} else {
+				log.Printf("SOCKET::EVENT: id:%v unauthorised to send direct message", c.id)
+				c.writeToWs_readFromHub(Message{
+					topic:   "system",
+					message: []byte("connection not authorised to send direct message"),
+				}, "morphine.unauthorised")
 			}
 		case "":
 			log.Printf("CONN::STATE: id:%v closed due to empty event", c.id)
@@ -125,6 +150,8 @@ func Generate_ClientWS(
 	req *http.Request,
 	resp http.ResponseWriter,
 	profileDetails WebsocketProfileDetails,
+	role Role,
+	sessionid string,
 ) {
 	socket, err := upgrader.Upgrade(resp, req, nil) //no automatic setting of response headers
 	if err != nil {
@@ -145,7 +172,10 @@ func Generate_ClientWS(
 		topics:        make([]string, 10), //can subscribe to a max of 10 topics
 		topic_arr_len: 0,
 		socket:        socket,
+		role:          role,
 	}
+
+	h.clients[sessionid] = conn
 
 	conn.readWsPayload_transferToHub()
 }

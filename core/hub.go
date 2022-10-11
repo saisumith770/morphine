@@ -31,8 +31,10 @@ type Message struct {
 }
 
 type Hub struct {
+	clients    map[string]*Conn
 	rooms      map[string][]*Conn
 	broadcast  chan Message
+	dm         chan Message
 	join       chan ChannelConnInfo
 	leave      chan ChannelConnInfo
 	disconnect chan *Conn
@@ -42,6 +44,7 @@ type Hub struct {
 
 func Generate_HubService() (h *Hub) {
 	return &Hub{
+		clients:    make(map[string]*Conn),
 		rooms:      make(map[string][]*Conn), //rooms are collections of Conn subscribed to some topic
 		broadcast:  make(chan Message),
 		join:       make(chan ChannelConnInfo),
@@ -144,6 +147,8 @@ func (h *Hub) Run() {
 			} else {
 				log.Printf("ROOM::ACCESS: id:%v failed to broadcast message to room:%v", payload.conn_id, payload.topic)
 			}
+		case dm := <-h.dm:
+			h.clients[dm.topic].writeToWs_readFromHub(dm, "morphine.direct_message")
 		case webhook := <-h.webhook:
 			h.webhooks[webhook.Topic] = append(h.webhooks[webhook.Topic], webhook.Url)
 			log.Printf("WEBHOOK::CREATE: successfully subscribed url:%v to room:%v", webhook.Url, webhook.Topic)
@@ -159,6 +164,7 @@ func (h *Hub) Run() {
 					}
 				}
 			}
+			delete(h.clients, conn.name)
 			log.Printf("CONN::STATE: disconnected %v from all rooms", conn.id)
 		}
 	}
