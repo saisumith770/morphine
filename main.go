@@ -123,5 +123,9 @@ func main() {
 		core.Generate_ClientWS(hub, req, res, profileDetails, role, sessionid)
 	})
 
-	log.Fatal("RUNNING::SERVER: ", http.ListenAndServe(":4001", router))
+	log.Printf("RUNNING::SERVER: http://localhost:4001/",)
+	err := http.ListenAndServe(":4001", router)
+	if err!=nil{
+		log.Fatal("RUNNING::SERVER: ", err)
+	}
 }
