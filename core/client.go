@@ -9,38 +9,6 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-type Role int64
-
-const (
-	ADMIN Role = iota
-	SERVER
-	USER
-)
-
-type Conn struct {
-	id            string
-	name          string
-	avatar        string
-	hub           *Hub
-	topics        []string //all topics a client is subscribed to
-	topic_arr_len int
-	socket        *websocket.Conn
-	role          Role
-}
-
-type SocketMessagePayload struct {
-	Name        string `json:"name"`
-	Avatar      string `json:"avatar"`
-	Topic       string `json:"topic"`
-	Event       string `json:"event"`
-	JsonMessage string `json:"json_message"`
-}
-
-type WebsocketProfileDetails struct {
-	Name   string `json:"name"`
-	Avatar string `json:"avatar"`
-}
-
 func (c *Conn) readWsPayload_transferToHub() {
 	defer func() {
 		c.hub.disconnect <- c
@@ -113,24 +81,6 @@ func (c *Conn) writeToWs_readFromHub(msg Message, event string) {
 		log.Println("SOCKET::WRITE: error while writing a message to the websocket")
 		return
 	}
-}
-
-func Subscribe_Webhook(hub *Hub, topic string, url string) {
-	hub.webhook <- WebhookConnInfo{
-		Topic: topic,
-		Url:   url,
-	}
-}
-
-func Room_Presence(hub *Hub, topic string) []WebsocketProfileDetails {
-	var result []WebsocketProfileDetails
-	for _, conn := range hub.rooms[topic] {
-		result = append(result, WebsocketProfileDetails{
-			Name:   conn.name,
-			Avatar: conn.avatar,
-		})
-	}
-	return result
 }
 
 var upgrader = websocket.Upgrader{

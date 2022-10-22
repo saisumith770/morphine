@@ -12,36 +12,6 @@ leverages pub/sub mechanism
 run a goroutine and use a channel to broadcast messages
 */
 
-type ChannelConnInfo struct {
-	topic  string
-	client *Conn
-}
-
-type WebhookConnInfo struct {
-	Topic string `json:"topic"`
-	Url   string `json:"url"`
-}
-
-type Message struct {
-	conn_id string
-	name    string
-	avatar  string
-	topic   string
-	message []byte
-}
-
-type Hub struct {
-	clients    map[string]*Conn
-	rooms      map[string][]*Conn
-	broadcast  chan Message
-	dm         chan Message
-	join       chan ChannelConnInfo
-	leave      chan ChannelConnInfo
-	disconnect chan *Conn
-	webhook    chan WebhookConnInfo
-	webhooks   map[string][]string
-}
-
 func Generate_HubService() (h *Hub) {
 	return &Hub{
 		clients:    make(map[string]*Conn),
@@ -53,11 +23,6 @@ func Generate_HubService() (h *Hub) {
 		webhook:    make(chan WebhookConnInfo),
 		webhooks:   make(map[string][]string),
 	}
-}
-
-func remove[T any](s []T, i int) []T {
-	s[i] = s[len(s)-1]
-	return s[:len(s)-1]
 }
 
 func (h *Hub) Run() {
