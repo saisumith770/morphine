@@ -11,7 +11,6 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// work on implementations
 func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Fatal("SYSTEM::ENVIRONMENT: failed to load environment variables from godotenv")
