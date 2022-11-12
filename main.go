@@ -7,6 +7,7 @@ import (
 	"com.mixin.morphine/core"
 	"com.mixin.morphine/routes"
 	"github.com/go-redis/redis/v9"
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 )
@@ -25,6 +26,11 @@ func main() {
 	hub := core.Generate_HubService()
 	router := mux.NewRouter()
 
+	headers := handlers.AllowedHeaders([]string{"Access-Token"})
+	credentials := handlers.AllowCredentials()
+	methods := handlers.AllowedMethods([]string{"GET", "POST"})
+	origins := handlers.AllowedOrigins([]string{"*"})
+
 	go hub.Run()
 
 	router.HandleFunc("/analytics", routes.ServerAnalytics()).Methods("GET")
@@ -33,7 +39,7 @@ func main() {
 	router.HandleFunc("/connect", routes.CreateWebsocket(hub, rdb))
 
 	log.Printf("RUNNING::SERVER: http://localhost:4001/")
-	err := http.ListenAndServe(":4001", router)
+	err := http.ListenAndServe(":4001", handlers.CORS(headers, credentials, methods, origins)(router))
 	if err != nil {
 		log.Fatal("RUNNING::SERVER: ", err)
 	}
