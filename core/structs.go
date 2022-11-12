@@ -63,6 +63,7 @@ type Hub struct {
 	dm         chan Message
 	join       chan ChannelConnInfo
 	leave      chan ChannelConnInfo
+	presence chan Message
 	disconnect chan *Conn
 	webhook    chan WebhookConnInfo
 	webhooks   map[string][]string

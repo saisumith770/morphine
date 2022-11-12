@@ -55,6 +55,13 @@ func (c *Conn) readWsPayload_transferToHub() {
 					message: []byte("connection not authorised to send direct message"),
 				}, "morphine.unauthorised")
 			}
+		case "morphine.presence":
+			c.hub.presence <- Message{
+				conn_id: c.id,
+				name: c.name,
+				avatar: c.avatar,
+				message: []byte(payload.JsonMessage),
+			}
 		case "":
 			log.Printf("CONN::STATE: id:%v closed due to empty event", c.id)
 			readSocket = false //socket is most likely compromised

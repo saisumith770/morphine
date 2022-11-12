@@ -17,6 +17,7 @@ func Generate_HubService() (h *Hub) {
 		clients:    make(map[string]*Conn),
 		rooms:      make(map[string][]*Conn), //rooms are collections of Conn subscribed to some topic
 		broadcast:  make(chan Message),
+		presence: make(chan Message),
 		join:       make(chan ChannelConnInfo),
 		leave:      make(chan ChannelConnInfo),
 		disconnect: make(chan *Conn),
@@ -114,6 +115,13 @@ func (h *Hub) Run() {
 			}
 		case dm := <-h.dm:
 			h.clients[dm.topic].writeToWs_readFromHub(dm, "morphine.direct_message")
+		case presenceMessage := <- h.presence:
+			conn := h.clients[presenceMessage.name]
+			for _,topic := range conn.topics{
+				for _,client := range h.rooms[topic]{
+					client.writeToWs_readFromHub(presenceMessage,"morphine.presence")
+				}
+			}
 		case webhook := <-h.webhook:
 			h.webhooks[webhook.Topic] = append(h.webhooks[webhook.Topic], webhook.Url)
 			log.Printf("WEBHOOK::CREATE: successfully subscribed url:%v to room:%v", webhook.Url, webhook.Topic)
