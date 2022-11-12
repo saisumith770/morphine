@@ -58,8 +58,8 @@ func (c *Conn) readWsPayload_transferToHub() {
 		case "morphine.presence":
 			c.hub.presence <- Message{
 				conn_id: c.id,
-				name: c.name,
-				avatar: c.avatar,
+				name:    c.name,
+				avatar:  c.avatar,
 				message: []byte(payload.JsonMessage),
 			}
 		case "":
