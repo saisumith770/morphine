@@ -35,7 +35,8 @@ func ReadConnections(hub *core.Hub, rdb *redis.Client) func(res http.ResponseWri
 			}
 		}
 
-		core.Room_Presence(hub, req.URL.Query().Get("room"))
+		res.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(res).Encode(core.Room_Presence(hub, req.URL.Query().Get("room")))
 	}
 }
 
